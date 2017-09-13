@@ -1,2 +1,2 @@
 # jupyterhub-singularity-spawner
-Spawn Singularity containers with JupyterHub.
+Spawn user-specified Singularity containers with JupyterHub.
