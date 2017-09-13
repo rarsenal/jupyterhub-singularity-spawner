@@ -18,8 +18,9 @@ from jupyterhub.spawner import (
     LocalProcessSpawner, set_user_setuid
 )
 from jupyterhub.utils import random_port
+from jupyterhub.traitlets import Command
 from traitlets import (
-    Integer, Unicode, Float, Dict, Command, default
+    Integer, Unicode, Float, Dict, default
 )
 
 class SingularitySpawner(LocalProcessSpawner):
@@ -35,7 +36,7 @@ class SingularitySpawner(LocalProcessSpawner):
         specify any site-specific options that should be applied to all users,
         such as default mounts.
         """
-    )
+    ).tag(config=True)
 
     default_image_path = Unicode('',
         help="""
@@ -45,12 +46,31 @@ class SingularitySpawner(LocalProcessSpawner):
         """
     ).tag(config=True)
 
+    options_form = Unicode()
+
+    form_template = Unicode(
+        """<label for="user_image_path">
+            Specify the Singularity image to use (absolute filepath):
+        </label>
+        <input class="form-control" name="user_image_path" value={default_image_path} required autofocus>
+        """
+    )
+
+    def _options_form_default(self):
+        format_options = dict(default_image_path=self.default_image_path)
+        options_form = self.form_template.format(**format_options)
+        return options_form
+
+    def options_from_form(self, form_data):
+        return dict(user_image_path=form_data.get('user_image_path',None))
+
     def _build_cmd(self):
+        image_path = self.user_options.get('user_image_path',self.default_image_path)
         cmd = []
         cmd.extend(self.singularity_cmd)
-        cmd.append(default_image_path)
+        cmd.extend(image_path)
         cmd.extend(self.cmd)
-        self.cmd = cmd
+        return ' '.join(cmd)
 
     @gen.coroutine
     def start(self):
