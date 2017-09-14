@@ -19,8 +19,15 @@ c.SingularitySpawner.default_image_path = "/home/<username>/singularity/jupyter.
 ## Running Notebooks with Singularity
 _**Note:** The manifest in this repo depends on the docker bootstrap method, so the Docker daemon must be installed and running._
 
-This repo comes with a minimal Singularity manifest for running `jupyterhub-singleuser` within a Singularity container. To build the image _(using Singularity v2.3.1)_:
+A minimal Singularity container for running `jupyterhub-singleuser` is available at https://github.com/ResearchComputing/singularity-jupyter. To build the image _(using Singularity v2.3.1)_:
 ```
+git clone https://github.com/ResearchComputing/singularity-jupyter.git
+cd singularity-jupyter
 singularity create jupyter.img
-sudo singularity bootstrap jupyter.img jupyter.def
+sudo singularity bootstrap jupyter.img Singularity
+```
+
+Alternatively, you can build from SingularityHub:
+```
+singularity pull shub://ResearchComputing/singularity-jupyter:master
 ```
