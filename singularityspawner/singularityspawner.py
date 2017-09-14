@@ -38,7 +38,7 @@ class SingularitySpawner(LocalProcessSpawner):
         """
     ).tag(config=True)
 
-    default_image_path = Unicode('',
+    default_image_path = Command([''],
         help="""
         Absolute POSIX filepath to Singularity image that will be used to
         execute the notebook server spawn command, if another path is not
