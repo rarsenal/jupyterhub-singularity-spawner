@@ -29,7 +29,7 @@ class SingularitySpawner(LocalProcessSpawner):
     2) Spawning a Notebook server within a Singularity container
     """
 
-    singularity_cmd = Command(['singularity','exec'],
+    singularity_cmd = Command(['/usr/local/bin/singularity','exec'],
         help="""
         This is the singularity command that will be executed when starting the
         singule-user server. The image path and notebook server args will be concatenated to the end of this command. This is a good place to
@@ -70,7 +70,7 @@ class SingularitySpawner(LocalProcessSpawner):
         cmd.extend(self.singularity_cmd)
         cmd.extend(image_path)
         cmd.extend(self.cmd)
-        return ' '.join(cmd)
+        return cmd
 
     @gen.coroutine
     def start(self):
