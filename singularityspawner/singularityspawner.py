@@ -20,7 +20,7 @@ from jupyterhub.spawner import (
 from jupyterhub.utils import random_port
 from jupyterhub.traitlets import Command
 from traitlets import (
-    Integer, Unicode, Float, Dict, default
+    Integer, Unicode, Float, Dict, List, default
 )
 
 class SingularitySpawner(LocalProcessSpawner):
@@ -38,7 +38,7 @@ class SingularitySpawner(LocalProcessSpawner):
         """
     ).tag(config=True)
 
-    default_image_path = Command([''],
+    default_image_path = Unicode('',
         help="""
         Absolute POSIX filepath to Singularity image that will be used to
         execute the notebook server spawn command, if another path is not
@@ -56,8 +56,15 @@ class SingularitySpawner(LocalProcessSpawner):
         """
     )
 
-    def _options_form_default(self):
-        format_options = dict(default_image_path=self.default_image_path[0])
+    def format_default_image_path(self):
+        format_options = dict(username=self.user.escaped_name)
+        default_image_path = self.default_image_path.format(**format_options)
+        return default_image_path
+
+    @default('options_form')
+    def _options_form(self):
+        default_image_path = self.format_default_image_path()
+        format_options = dict(default_image_path=default_image_path)
         options_form = self.form_template.format(**format_options)
         return options_form
 
@@ -65,7 +72,8 @@ class SingularitySpawner(LocalProcessSpawner):
         return dict(user_image_path=form_data.get('user_image_path',None))
 
     def _build_cmd(self):
-        image_path = self.user_options.get('user_image_path',self.default_image_path)
+        default_image_path = self.format_default_image_path()
+        image_path = self.user_options.get('user_image_path',[default_image_path])
         cmd = []
         cmd.extend(self.singularity_cmd)
         cmd.extend(image_path)
