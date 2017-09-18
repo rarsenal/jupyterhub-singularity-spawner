@@ -57,7 +57,7 @@ class SingularitySpawner(LocalProcessSpawner):
     )
 
     def _options_form_default(self):
-        format_options = dict(default_image_path=self.default_image_path)
+        format_options = dict(default_image_path=self.default_image_path[0])
         options_form = self.form_template.format(**format_options)
         return options_form
 
