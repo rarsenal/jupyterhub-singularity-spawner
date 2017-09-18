@@ -12,7 +12,7 @@ pip install -e .
 ## Configuration
 A basic configuration for Singularity Spawner _(in the JupyterHub config file)_:
 ```python
-c.JupyterHub.spawner_class = 'singularityspawner.singularityspawner.SingularitySpawner'
+c.JupyterHub.spawner_class = 'singularityspawner.SingularitySpawner'
 c.SingularitySpawner.default_image_path = "/home/{username}/singularity/jupyter.img"
 ```
 
