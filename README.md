@@ -13,21 +13,9 @@ pip install -e .
 A basic configuration for Singularity Spawner _(in the JupyterHub config file)_:
 ```python
 c.JupyterHub.spawner_class = 'singularityspawner.SingularitySpawner'
+c.SingularitySpawner.default_image_url = "docker://jupyter/base-notebook"
 c.SingularitySpawner.default_image_path = "/home/{username}/singularity/jupyter.img"
 ```
 
 ## Running Notebooks with Singularity
-_**Note:** The manifest in this repo depends on the docker bootstrap method, so the Docker daemon must be installed and running._
-
-A minimal Singularity container for running `jupyterhub-singleuser` is available at https://github.com/ResearchComputing/singularity-jupyter. To build the image _(using Singularity v2.3.1)_:
-```
-git clone https://github.com/ResearchComputing/singularity-jupyter.git
-cd singularity-jupyter
-singularity create jupyter.img
-sudo singularity bootstrap jupyter.img Singularity
-```
-
-Alternatively, you can build from SingularityHub:
-```
-singularity pull shub://ResearchComputing/singularity-jupyter:master
-```
+[Jupyter Docker Stacks](https://github.com/jupyter/docker-stacks) can be used as a base for building custom notebook environments run in Singularity containers.
