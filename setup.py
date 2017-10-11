@@ -33,7 +33,7 @@ setup_args = dict(
     url                 = "https://github.com/ResearchComputing/jupyterhub-singularity-spawner",
     license             = "BSD",
     platforms           = "Linux",
-    keywords            = ['Interactive', 'Interpreter', 'Shell', 'Web'],
+    keywords            = ['Interactive', 'Interpreter', 'Shell', 'Web', 'Singularity', 'Containers'],
     classifiers         = [
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',
