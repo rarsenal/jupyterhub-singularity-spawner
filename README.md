@@ -1,7 +1,7 @@
 # jupyterhub-singularity-spawner
 Spawn user-specified Singularity containers with JupyterHub.
 
-# Pip Installation
+## Pip Installation
 To install Singularity Spawner via Pip:
 ```
 pip install jupyterhub-singularity-spawner
