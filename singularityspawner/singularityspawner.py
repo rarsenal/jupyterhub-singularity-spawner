@@ -7,7 +7,7 @@ SingularitySpawner provides a mechanism for spawning Jupyter Notebooks inside of
 
 A `singularity exec {notebook spawn cmd}` is used to start the notebook inside of the container.
 """
-import os
+import os, subprocess
 import pipes
 
 from tornado import gen
@@ -24,31 +24,13 @@ from traitlets import (
     Integer, Unicode, Float, Dict, List, Bool, default
 )
 
-JS_SCRIPT = """<script>
-require(['jquery'], function($) {
-  var pullCheckbox = $('#pull-checkbox');
-  var spawnButton = $('#spawn_form input[type="submit"]');
-
-  pullCheckbox.on('change', function() {
-    $('#url-group').toggle();
-  });
-
-  spawnButton.on('click', function() {
-    if (pullCheckbox.is(':checked')) {
-      $(this).attr("value","Pulling image...")
-    }
-  })
-});
-</script>
-"""
-
 class SingularitySpawner(LocalProcessSpawner):
     """SingularitySpawner - extends the default LocalProcessSpawner to allow for:
     1) User-specification of a singularity image via the Spawner options form
     2) Spawning a Notebook server within a Singularity container
     """
 
-    singularity_cmd = Command(['/usr/local/bin/singularity','exec'],
+    singularity_cmd = Command(['/opt/singularity/3.3.0/bin/singularity','exec'],
         help="""
         This is the singularity command that will be executed when starting the
         single-user server. The image path and notebook server args will be concatenated to the end of this command. This is a good place to
@@ -65,6 +47,14 @@ class SingularitySpawner(LocalProcessSpawner):
         """
     ).tag(config=True)
 
+    imagename = Unicode('',
+        help="""
+        Absolute POSIX filepath to Singularity image that will be used to
+        execute the notebook server spawn command, if another path is not
+        specified by the user.
+        """
+    ).tag(config=True)
+
     default_image_path = Unicode('',
         help="""
         Absolute POSIX filepath to Singularity image that will be used to
@@ -73,95 +63,10 @@ class SingularitySpawner(LocalProcessSpawner):
         """
     ).tag(config=True)
 
-    pull_from_url = Bool(False,
-        help="""
-        If set to True, the user should be presented with URI specification
-        options, and the spawner should first pull a new image from the
-        specified shub or docker URI prior to running the notebook command.
-        In this configuration, the `user_image_path` will specify where the
-        new container will be created.
-        """
-    ).tag(config=True)
-
-    default_image_url = Unicode('docker://jupyter/base-notebook',
-        help="""
-        Singularity Hub or Docker URI from which the notebook image will be
-        pulled, if no other URI is specified by the user but the _pull_ option
-        has been selected.
-        """
-    ).tag(config=True)
-
-    options_form = Unicode()
-
-    form_template = Unicode(
-        """
-        <div class="checkbox">
-          <label>
-            <input id="pull-checkbox" type="checkbox" value="pull" name="pull_from_url">Pull from URL
-          </label>
-        </div>
-        <div id="url-group" class="form-group" hidden>
-          <label for="user_image_url">
-            Specify the image URL to pull from:
-          </label>
-          <input class="form-control" name="user_image_url" value="{default_image_url}">
-        </div>
-        <div class="form-group">
-          <label id="path-label" for="user_image_path">
-            Specify the Singularity image to use (absolute filepath):
-          </label>
-          <input class="form-control" name="user_image_path" value="{default_image_path}" required autofocus>
-        </div>
-        """
-    )
-
-    def format_default_image_path(self):
-        """Format the image path template string."""
-        format_options = dict(username=self.user.escaped_name)
-        default_image_path = self.default_image_path.format(**format_options)
-        return default_image_path
-
-    @default('options_form')
-    def _options_form(self):
-        """Render the options form."""
-        default_image_path = self.format_default_image_path()
-        format_options = dict(default_image_path=default_image_path,default_image_url=self.default_image_url)
-        options_form = self.form_template.format(**format_options)
-        return JS_SCRIPT + options_form
-
-    def options_from_form(self, form_data):
-        """Get data from options form input fields."""
-        user_image_path = form_data.get('user_image_path', None)
-        user_image_url = form_data.get('user_image_url', None)
-        pull_from_url = form_data.get('pull_from_url',False)
-
-        return dict(user_image_path=user_image_path,user_image_url=user_image_url,pull_from_url=pull_from_url)
-
-    def get_image_url(self):
-        """Get image URL to pull image from user options or default."""
-        default_image_url = self.default_image_url
-        image_url = self.user_options.get('user_image_url',[default_image_url])
-        return image_url
-
-    def get_image_path(self):
-        """Get image filepath specified in user options else default."""
-        default_image_path = self.format_default_image_path()
-        image_path = self.user_options.get('user_image_path',[default_image_path])
-        return image_path
-
-    @gen.coroutine
-    def pull_image(self,image_url):
-        """Pull the singularity image to specified image path."""
-        image_path = self.get_image_path()
-        s = Singularity()
-        container_path = s.pull(image_url[0],image_name=image_path[0])
-        return Unicode(container_path)
-
     def _build_cmd(self):
-        image_path = self.get_image_path()
         cmd = []
         cmd.extend(self.singularity_cmd)
-        cmd.extend(image_path)
+        cmd.extend([self.default_image_path])
         cmd.extend(self.notebook_cmd)
         return cmd
 
@@ -169,17 +74,69 @@ class SingularitySpawner(LocalProcessSpawner):
     def cmd(self):
         return self._build_cmd()
 
-    @gen.coroutine
-    def start(self):
-        """
-        Start the single-user server in the Singularity container specified
-        by image path, pulling from docker or shub first if the pull option
-        is selected.
-        """
-        image_path = self.get_image_path()
-        pull_from_url = self.user_options.get('pull_from_url',False)
-        if pull_from_url:
-            image_url = self.get_image_url()
-            self.pull_image(image_url)
+    def get_env(self):
+        """Get the complete set of environment variables to be set in the spawned process."""
+        env = super().get_env()
+        env = self.user_env(env)
+        env['BIOJHUB_IMAGE'] = str(self.imagename)
+        tmpdirpath = os.path.join('/tmp',self.user.name,self.imagename)
+        if not os.path.exists(tmpdirpath):
+            os.makedirs(tmpdirpath)
+        env['SINGULARITY_BINDPATH'] = '/tmp/'+str(self.user.name)+'/'+str(self.imagename)+':/tmp'
+        biojhubhome = str(subprocess.check_output('sudo -Hiu '+str(self.user.name)+'env| grep BIOJHUBHOME|cut -f2 -d "="', shell=True),'utf-8').rstrip()
+        if biojhubhome is "":
+            biojhubhome = '/data/users/'+str(self.user.name)+'/'+str(self.imagename)
+        if not os.path.exists(biojhubhome):
+            subprocess.check_output('sudo -u '+str(self.user.name)+' mkdir '+biojhubhome)
+        env['SINGULARITY_HOME'] = biojhubhome 
+        return env
 
-        super(SingularitySpawner,self).start()
+
+    async def start(self):
+        """Start the single-user server."""
+        self.port = random_port()
+        cmd = []
+        env = self.get_env()
+
+        cmd.extend(self.cmd)
+        cmd.extend(self.get_args())
+
+        if self.shell_cmd:
+            # using shell_cmd (e.g. bash -c),
+            # add our cmd list as the last (single) argument:
+            cmd = self.shell_cmd + [' '.join(pipes.quote(s) for s in cmd)]
+
+        self.log.info("Spawning %s", ' '.join(pipes.quote(s) for s in cmd))
+
+        popen_kwargs = dict(
+            preexec_fn=self.make_preexec_fn(self.user.name),
+            start_new_session=True,  # don't forward signals
+        )
+        popen_kwargs.update(self.popen_kwargs)
+        # don't let user config override env
+        popen_kwargs['env'] = env
+        try:
+            self.proc = Popen(cmd, **popen_kwargs)
+        except PermissionError:
+            # use which to get abspath
+            script = shutil.which(cmd[0]) or cmd[0]
+            self.log.error(
+                "Permission denied trying to run %r. Does %s have access to this file?",
+                script,
+                self.user.name,
+            )
+            raise
+
+        self.pid = self.proc.pid
+
+        if self.__class__ is not LocalProcessSpawner:
+            # subclasses may not pass through return value of super().start,
+            # relying on deprecated 0.6 way of setting ip, port,
+            # so keep a redundant copy here for now.
+            # A deprecation warning will be shown if the subclass
+            # does not return ip, port.
+            if self.ip:
+                self.server.ip = self.ip
+            self.server.port = self.port
+            self.db.commit()
+        return (self.ip or '127.0.0.1', self.port)
