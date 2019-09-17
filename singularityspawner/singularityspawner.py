@@ -90,7 +90,7 @@ class SingularitySpawner(LocalProcessSpawner):
             biojhubhome = '/data/users/'+str(self.user.name)+'/'+str(self.imagename)
         if not os.path.exists(biojhubhome):
             subprocess.check_output('sudo -u '+str(self.user.name)+' mkdir -p '+biojhubhome)
-        env['SINGULARITY_HOME'] = biojhubhome 
+        env['SINGULARITY_HOME'] = biojhubhome+":/home/jovyan"
         return env
 
 
