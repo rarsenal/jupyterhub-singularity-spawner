@@ -10,6 +10,8 @@ A `singularity exec {notebook spawn cmd}` is used to start the notebook inside o
 import os, subprocess
 import pipes
 
+from subprocess import Popen
+
 from tornado import gen
 from tornado.process import Subprocess
 from tornado.iostream import StreamClosedError
