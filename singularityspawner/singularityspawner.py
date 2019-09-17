@@ -97,7 +97,6 @@ class SingularitySpawner(LocalProcessSpawner):
 
         os.makedirs(biojhubhome, exist_ok=True)
 
-
         env['SINGULARITY_HOME'] = biojhubhome+":/home/jovyan"
 
         return env
