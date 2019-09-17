@@ -8,7 +8,7 @@ SingularitySpawner provides a mechanism for spawning Jupyter Notebooks inside of
 A `singularity exec {notebook spawn cmd}` is used to start the notebook inside of the container.
 """
 import os, subprocess
-import pipes
+import pipes, shutil
 
 from subprocess import Popen
 
@@ -82,8 +82,12 @@ class SingularitySpawner(LocalProcessSpawner):
         env = self.user_env(env)
         env['CONTAINER_IMAGE'] = str(self.imagename)
         tmpdirpath = os.path.join('/tmp',self.user.name,self.imagename)
+
         if not os.path.exists(tmpdirpath):
-            os.makedirs(tmpdirpath)
+            os.makedirs(tmpdirpath, exist_ok=True)
+            shutil.chown(tmpdirpath, user=str(self.user.name), group=str(self.user.name))
+            os.chmod(tmpdirpath, 0o755)
+
         env['SINGULARITY_BINDPATH'] = '/tmp/'+str(self.user.name)+'/'+str(self.imagename)+':/tmp'
         biojhubhome = str(subprocess.check_output('sudo -Hiu '+str(self.user.name)+' env| grep BIOJHUBHOME|cut -f2 -d "="', shell=True),'utf-8').rstrip()
 
@@ -95,7 +99,10 @@ class SingularitySpawner(LocalProcessSpawner):
         #if not os.path.exists(biojhubhome):
             #print(str(subprocess.check_output('sudo -u '+str(self.user.name)+' mkdir -p '+biojhubhome),'utf-8'))
 
-        os.makedirs(biojhubhome, exist_ok=True)
+        if not os.path.isdir(biojhubhome):
+            os.makedirs(biojhubhome, exist_ok=True)
+            shutil.chown(biojhubhome, user=str(self.user.name), group=str(self.user.name))
+            os.chmod(biojhubhome, 0o755)
 
         env['SINGULARITY_HOME'] = biojhubhome+":/home/jovyan"
 
