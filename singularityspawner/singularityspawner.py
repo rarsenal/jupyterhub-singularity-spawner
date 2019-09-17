@@ -103,8 +103,8 @@ class SingularitySpawner(LocalProcessSpawner):
             #os.makedirs(biojhubhome, exist_ok=True)
             #shutil.chown(biojhubhome, user=str(self.user.name), group=str(self.user.name))
             #os.chmod(biojhubhome, 0o755)
-            subprocess.call('sudo -u '+str(self.user.name)+' mkdir -p '+str(biojhubhome))
-            subprocess.call('sudo -u '+str(self.user.name)+' chmod 755 '+str(biojhubhome))
+            subprocess.call('sudo -u '+str(self.user.name)+' mkdir -p '+str(biojhubhome), shell=True)
+            subprocess.call('sudo -u '+str(self.user.name)+' chmod 755 '+str(biojhubhome), shell=True)
 
         env['SINGULARITY_HOME'] = biojhubhome+":/home/jovyan"
 
