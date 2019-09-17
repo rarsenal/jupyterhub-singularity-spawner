@@ -80,14 +80,16 @@ class SingularitySpawner(LocalProcessSpawner):
         """Get the complete set of environment variables to be set in the spawned process."""
         env = super().get_env()
         env = self.user_env(env)
-        env['BIOJHUB_IMAGE'] = str(self.imagename)
+        env['CONTAINER_IMAGE'] = str(self.imagename)
         tmpdirpath = os.path.join('/tmp',self.user.name,self.imagename)
         if not os.path.exists(tmpdirpath):
             os.makedirs(tmpdirpath)
         env['SINGULARITY_BINDPATH'] = '/tmp/'+str(self.user.name)+'/'+str(self.imagename)+':/tmp'
         biojhubhome = str(subprocess.check_output('sudo -Hiu '+str(self.user.name)+' env| grep BIOJHUBHOME|cut -f2 -d "="', shell=True),'utf-8').rstrip()
         if biojhubhome is "":
-            biojhubhome = '/data/users/'+str(self.user.name)+'/'+str(self.imagename)
+            biojhubhome = '/data/users/'+str(self.user.name)+'/container_cache/'+str(self.imagename)
+        else:
+            biojhubhome = biojhubhome+'/'+str(self.imagename)
         if not os.path.exists(biojhubhome):
             subprocess.check_output('sudo -u '+str(self.user.name)+' mkdir -p '+biojhubhome)
         env['SINGULARITY_HOME'] = biojhubhome+":/home/jovyan"
